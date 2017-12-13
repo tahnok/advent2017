@@ -13,51 +13,66 @@ const UP: bool = true;
 
 fn severity(input: &str) -> usize {
     let mut layers = HashMap::new();
-    let mut layer_pos_orig = HashMap::new();
-    let mut layer_dir_orig = HashMap::new();
 
     let mut max = 0;
     for line in input.lines() {
         let mut parts = line.split(": ");
         let layer: usize = parts.next().unwrap().parse().unwrap();
         let depth: usize = parts.next().unwrap().parse().unwrap();
-        layers.insert(layer,depth);
-        layer_pos_orig.insert(layer, 0);
-        layer_dir_orig.insert(layer, DOWN);
+        layers.insert(layer, (depth, 0, DOWN));
         max = layer;
     }
 
-    let mut delay = 0;
+    let mut states = HashMap::new();
+
+    let mut delay = 31168;
     'outer: loop {
         delay += 1;
-        let mut layer_pos = layer_pos_orig.clone();
-        let mut layer_dir = layer_dir_orig.clone();
-        for (layer, &depth) in layers.iter() {
-            let offset = delay % (depth * 2);
-            if offset > depth {
-                let pos = depth - (offset - depth);
-                let dir = UP;
-                layer_pos.insert(*layer, pos);
-                layer_dir.insert(*layer, dir);
-            } else {
-                let pos = offset;
-                let dir = DOWN;
-                layer_pos.insert(*layer, pos);
-                layer_dir.insert(*layer, dir);
+        println!("delay {}", delay);
+        let mut layers_clone = layers.clone();
+
+        if states.contains_key(&delay) {
+            let temp: &HashMap<usize, (usize, usize, bool)> = states.get(&delay).unwrap();
+            layers_clone = temp.clone();
+        } else {
+            'step: for state in 0..delay {
+                if states.contains_key(&state) {
+                    let temp: &HashMap<usize, (usize, usize, bool)> = states.get(&state).unwrap();
+                    layers_clone = temp.clone();
+                    continue 'step;
+                }
+
+                for layer in layers.keys() {
+                    let &(depth, mut pos, mut dir) = layers_clone.get(layer).unwrap();
+                    if dir == UP {
+                        pos -= 1;
+                    } else {
+                        pos += 1;
+                    }
+
+                    if pos == 0 {
+                        dir = DOWN;
+                    } else if pos == (depth - 1) {
+                        dir = UP;
+                    }
+
+                    //println!("{} is at {} moving {}", layer, pos, dir);
+                    layers_clone.insert(*layer, (depth, pos, dir));
+                }
+                states.insert(state, layers_clone.clone());
             }
         }
 
         for step in 0..(max + 1) {
             //println!("looking at {}", step);
             //check if caught
-            if layers.contains_key(&step) {
-                if *layer_pos.get(&step).unwrap() == 0 {
+            if layers_clone.contains_key(&step) {
+                if layers_clone.get(&step).unwrap().1 == 0 {
                     continue 'outer;
                 }
             }
-            for (layer, depth) in layers.iter() {
-                let mut pos = *layer_pos.get(&layer).unwrap();
-                let mut dir = *layer_dir.get(&layer).unwrap();
+            for layer in layers.keys() {
+                let &(depth, mut pos, mut dir) = layers_clone.get(layer).unwrap();
                 if dir == UP {
                     pos -= 1;
                 } else {
@@ -66,15 +81,14 @@ fn severity(input: &str) -> usize {
 
                 if pos == 0 {
                     dir = DOWN;
-                } else if pos == (*depth - 1) {
+                } else if pos == (depth - 1) {
                     dir = UP;
                 }
 
                 //println!("{} is at {} moving {}", layer, pos, dir);
-                layer_pos.insert(*layer, pos);
-                layer_dir.insert(*layer, dir);
+                layers_clone.insert(*layer, (depth, pos, dir));
             }
-            //println!("============");
+            states.insert(step + delay, layers_clone.clone());
         }
         break;
         //println!("{:?}", caught);
