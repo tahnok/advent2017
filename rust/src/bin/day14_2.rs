@@ -1,8 +1,8 @@
 #![feature(slice_rotate)]
 #![feature(inclusive_range,inclusive_range_syntax)]
 
-use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::io;
 use std::io::Read;
 
@@ -29,59 +29,59 @@ fn regions(input: &str) -> usize {
         }
         grid.push(row);
     }
-    let mut regions = 0;
-    let mut dup_regions = HashSet::new();
-    let mut region_map: HashMap<(usize, usize), usize> = HashMap::new();
+
+
+    let mut region_map = HashMap::new();
     for row in 0..128 {
         for column in 0..128 {
-            let filled = grid[row][column];
-            if !filled {
+
+            if !grid[row][column] {
                 continue;
             }
+            let mut neighbours = Vec::new();
 
-            let mut connected = false;
-            let mut connected_region = 0;
-            if row != 0 {
-                let up = (row - 1, column);
-                if region_map.contains_key(&up) {
-                    let existing_region = *region_map.get(&up).unwrap();
-                    region_map.insert((row, column), existing_region);
-                    connected = true;
-                    connected_region = existing_region;
+            if column > 0 {
+                let neighbour_row = column - 1;
+                let neighbour_column = row;
+                if grid[neighbour_column][neighbour_row] {
+                    neighbours.push((neighbour_row, neighbour_column));
                 }
             }
-            if column != 0 {
-                let left = (row, column - 1);
-                if region_map.contains_key(&left) {
-                    let existing_region = *region_map.get(&left).unwrap();
-                    if connected {
-                        dup_regions.insert((existing_region, connected_region));
-                        region_map.insert((row, column), connected_region);
-                    } else {
-                        region_map.insert((row, column), existing_region);
-                    }
-                    connected = true;
+            if column < 127 {
+                let neighbour_row = column + 1;
+                let neighbour_column = row;
+                if grid[neighbour_column][neighbour_row] {
+                    neighbours.push((neighbour_row, neighbour_column));
+                }
+            }
+            if row > 0 {
+                let neighbour_row = column;
+                let neighbour_column = row - 1;
+                if grid[neighbour_column][neighbour_row] {
+                    neighbours.push((neighbour_row, neighbour_column));
+                }
+            }
+            if row < 127 {
+                let neighbour_row = column;
+                let neighbour_column = row + 1;
+                if grid[neighbour_column][neighbour_row] {
+                    neighbours.push((neighbour_row, neighbour_column));
                 }
             }
 
-            if !connected {
-                regions += 1;
-                region_map.insert((row, column), regions);
-            }
-
+            region_map.insert((row,column), neighbours);
         }
     }
     for row in 0..8 {
         for column in 0..8 {
             match region_map.get(&(row,column)) {
-                Some(region) => print!("{}", region),
-                None => print!(".")
+                Some(neighbours) => println!("neighbours of {},{} are {:?}", row, column, neighbours),
+                None => println!("no neighbours for {},{}", row,column)
             }
         }
-        println!();
     }
-    println!("regions {}, dup_regions {}", regions, dup_regions.len());
-    regions - dup_regions.len()
+
+    0
 }
 
 fn hash(input: &str) -> Vec<u8> {
