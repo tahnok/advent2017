@@ -39,43 +39,51 @@ fn bottom_tower(input: &str) -> String {
 }
 
 fn check_weight(node: &str, children_by_name: &HashMap<&str, Vec<&str>>, weights: &HashMap<&str, usize>) -> usize {
-    let weight = *weights.get(node).unwrap();
-    if !children_by_name.contains_key(node) {
-        return weight;
+    let node_weight = *weights.get(node).unwrap();
+    if !children_by_name.contains_key(node) { //leaf node
+        return node_weight;
     }
+
     let children = children_by_name.get(node).unwrap();
-    
+    let mut child_recursive_weights = Vec::new();
 
-    let left = check_weight(children[0], children_by_name, weights);
-    let middle = check_weight(children[1], children_by_name, weights);
-    let right = check_weight(children[2], children_by_name, weights);
+    for child in children.iter() {
+        child_recursive_weights.push(check_weight(child, &children_by_name, &weights));
+    }
+    let total = node_weight + child_recursive_weights.iter().fold(0, |sum, x| sum + x);
 
-    if left != middle && middle == right {
-        let weight = weights.get(children[0]).unwrap();
-        if left > middle {
-            panic!("{} should be {}", weight, (weight - (left - middle)));
+    let len = children.len();
+    if len == 2 {
+        if child_recursive_weights[0] == child_recursive_weights[1] {
+            return total;
         } else {
-            panic!("{} should be {}", weight, (weight + (middle - left)));
+            panic!("2 child is unbalanced for {}", node)
         }
     }
 
-    if left == middle && middle != right {
-        let weight = weights.get(children[2]).unwrap();
-        if right > middle {
-            panic!("{} should be {}", weight, (weight - (right - middle)));
+    for (index, child) in children.iter().enumerate() {
+        let left_index = if index == 0 {
+            len - 1
         } else {
-            panic!("{} should be {}", weight, (weight + (middle - right)));
+            index - 1
+        };
+        let left = child_recursive_weights[left_index];
+        let right_index = if index == (len - 1) {
+            0
+        } else {
+            index + 1
+        };
+        let right = child_recursive_weights[right_index];
+        let child_weight = child_recursive_weights[index];
+        if left != child_weight && right != child_weight {
+            let x = weights.get(child).unwrap();
+            if child_weight > left {
+                panic!("answer is {}", x - (child_weight - left));
+            } else {
+                panic!("answer is {}", x + (left - child_weight));
+            }
         }
     }
 
-    if left != middle && left == right {
-        let weight = weights.get(children[1]).unwrap();
-        if middle > right {
-            panic!("{} should be {}", weight, (weight - (middle - right)));
-        } else {
-            panic!("{} should be {}", weight, (weight + (right - middle)));
-        }
-    }
-
-    weight + left + middle + right
+    total
 }
