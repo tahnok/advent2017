@@ -41,30 +41,30 @@ fn regions(input: &str) -> usize {
             let mut neighbours = Vec::new();
 
             if column > 0 {
-                let neighbour_row = column - 1;
-                let neighbour_column = row;
-                if grid[neighbour_column][neighbour_row] {
+                let neighbour_column = column - 1;
+                let neighbour_row = row;
+                if grid[neighbour_row][neighbour_column] {
                     neighbours.push((neighbour_row, neighbour_column));
                 }
             }
             if column < 127 {
-                let neighbour_row = column + 1;
-                let neighbour_column = row;
-                if grid[neighbour_column][neighbour_row] {
+                let neighbour_column = column + 1;
+                let neighbour_row = row;
+                if grid[neighbour_row][neighbour_column] {
                     neighbours.push((neighbour_row, neighbour_column));
                 }
             }
             if row > 0 {
-                let neighbour_row = column;
-                let neighbour_column = row - 1;
-                if grid[neighbour_column][neighbour_row] {
+                let neighbour_column = column;
+                let neighbour_row = row - 1;
+                if grid[neighbour_row][neighbour_column] {
                     neighbours.push((neighbour_row, neighbour_column));
                 }
             }
             if row < 127 {
-                let neighbour_row = column;
-                let neighbour_column = row + 1;
-                if grid[neighbour_column][neighbour_row] {
+                let neighbour_column = column;
+                let neighbour_row = row + 1;
+                if grid[neighbour_row][neighbour_column] {
                     neighbours.push((neighbour_row, neighbour_column));
                 }
             }
@@ -72,16 +72,33 @@ fn regions(input: &str) -> usize {
             region_map.insert((row,column), neighbours);
         }
     }
-    for row in 0..8 {
-        for column in 0..8 {
-            match region_map.get(&(row,column)) {
-                Some(neighbours) => println!("neighbours of {},{} are {:?}", row, column, neighbours),
-                None => println!("no neighbours for {},{}", row,column)
+
+    connected_regions(region_map)
+}
+
+fn connected_regions(edges: HashMap<(usize, usize), Vec<(usize, usize)>>) -> usize {
+    let mut count = 0;
+
+    let mut seen = HashSet::new();
+
+    for starting in edges.keys() {
+        let mut to_search = edges.get(&starting).unwrap().clone();
+        to_search.push(*starting);
+        let mut group = false;
+        while let Some(edge) = to_search.pop() {
+            if seen.contains(&edge) {
+                continue;
             }
+            group = true;
+
+            seen.insert(edge);
+            to_search.append(&mut edges.get(&edge).unwrap().clone());
+        }
+        if group {
+            count += 1;
         }
     }
-
-    0
+    count 
 }
 
 fn hash(input: &str) -> Vec<u8> {
