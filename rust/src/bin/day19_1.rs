@@ -44,22 +44,6 @@ fn path(input: &str) -> String {
     let height = grid.len();
     let width = grid[0].len();
 
-    for row in 0..height {
-        print!("{}: ", row);
-        for column in 0..width {
-            let square = &grid[row][column];
-            let val = match *square {
-                Square::Empty => ' ',
-                Square::LeftRight => '-',
-                Square::UpDown => '|',
-                Square::Turn => '+',
-                Square::Letter(x) => x
-            };
-            print!("{}", val);
-        }
-        println!("");
-    }
-    
     let mut row = 0;
     let mut column = grid[0].iter().position(|square| *square == Square::UpDown).unwrap();
     let mut direction = Direction::Down;
