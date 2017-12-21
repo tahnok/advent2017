@@ -70,7 +70,7 @@ fn step(
                 }
             },
             "jgz" => {
-                let reg_val = *registers.get(&reg).unwrap_or(&0);
+                let reg_val = val_or_reg(raw, &registers);
                 if reg_val > 0 {
                     let val = val_or_reg(parts.next().unwrap(), &registers);
                     step_size = val;
@@ -80,9 +80,9 @@ fn step(
         }
         let new_pc = (pc as isize) + step_size;
         if new_pc > (instructions.len() as isize) {
-            return (0, false, true, new_sends);
+            return (pc, false, true, new_sends);
         } else if new_pc < 0 {
-            return (0, false, true, new_sends);
+            return (pc, false, true, new_sends);
         }
 
     (new_pc as usize, false, false, new_sends)
@@ -104,20 +104,22 @@ fn solve(input: &str) -> usize {
     let mut sends_1 = 0;
 
     loop {
+        let instruction = instructions[pc_0];
         let (new_pc_0, deadlocked_0, stopped_0, new_sends_0) = step(pc_0, &instructions, &mut registers_0, &mut channel_1, &mut channel_0, sends_0);
         let (new_pc_1, deadlocked_1, stopped_1, new_sends_1) = step(pc_1, &instructions, &mut registers_1, &mut channel_0, &mut channel_1, sends_1);
         sends_0 = new_sends_0;
         sends_1 = new_sends_1;
         if stopped_0 || stopped_1 {
-            panic!("stopped");
+            println!("stopped");
+            break;
         }
         if deadlocked_0 && deadlocked_1 {
             println!("deadlocked");
             break;
         }
+        println!("{0:<2} -> {1:<2} {2:<14} | {3:?}", pc_0, new_pc_0, instruction, registers_0);
         pc_0 = new_pc_0;
         pc_1 = new_pc_1;
-        println!("{} {}", pc_0, pc_1);
     }
     sends_1
 }
