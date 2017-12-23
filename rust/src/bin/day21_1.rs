@@ -1,7 +1,10 @@
+extern crate itertools;
+
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
 
+use itertools::Itertools;
 
 fn main() {
     let mut input = String::new();
@@ -59,22 +62,17 @@ fn step(grid: &mut Matrix, transforms: &HashMap<Matrix,Matrix>) -> () {
     } else {
         3
     };
-    let slices = grid[0].len() / slice_size;
-    for row in 0..slices {
-        let row_index = row * slice_size;
-        for column in 0..slices {
-            let column_index = column * slice_size;
-            println!("{} {}", column_index, row_index);
-            for item in grid[row_index].iter().skip(column_index).take(slice_size) {
-                if *item {
-                    print!("#");
-                } else {
-                    print!(".");
-                }
-                println!("");
-            }
+    let len = grid[0].len() / slice_size;
+
+    let mut sliced_grid = Vec::new();
+    for row_chunk in &grid.clone().into_iter().chunks(slice_size) {
+        //row chunk is 2 or 3 rows
+        for _ in 0..len { // from 0 to N / 2 (or N / 3)
+            //take first slice_size elements from each row_chunk len times
         }
     }
+    println!("{:?}", sliced_grid);
+
 
 }
 
@@ -85,10 +83,10 @@ fn fractalize(input: &str) -> usize {
         //vec![true, true, true]
     //];
     let mut grid: Matrix = vec![
-        vec![true, false, true, false],
-        vec![true, false, false, true],
-        vec![true, true, true, true],
-        vec![true, true, true, false]
+        vec![true, true, true, false],
+        vec![true, true, false, true],
+        vec![false, false, false, true],
+        vec![false, false, true, false]
     ];
 
     let mut transforms = HashMap::new();
