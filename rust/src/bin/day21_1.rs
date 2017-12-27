@@ -1,10 +1,6 @@
-extern crate itertools;
-
 use std::collections::HashMap;
 use std::io;
 use std::io::Read;
-
-use itertools::Itertools;
 
 fn main() {
     let mut input = String::new();
@@ -56,37 +52,215 @@ fn count_on(matrix: &Matrix) -> usize {
 
 type Matrix = Vec<Vec<bool>>;
 
-fn step(grid: &mut Matrix, transforms: &HashMap<Matrix,Matrix>) -> () {
-    let slice_size = if grid[0].len() % 2 == 0 {
-        2
-    } else {
-        3
-    };
-    let len = grid[0].len() / slice_size;
+fn step(grid: &Matrix, transforms: &HashMap<Matrix,Matrix>) -> Matrix {
 
-    let mut sliced_grid = Vec::new();
-    for row_chunk in &grid.clone().into_iter().chunks(slice_size) {
-        //row chunk is 2 or 3 rows
-        for _ in 0..len { // from 0 to N / 2 (or N / 3)
-            //take first slice_size elements from each row_chunk len times
+    if grid.len() % 2 == 0 {
+        let chunks = split2(&grid);
+        let new_parts = find_rotations(&chunks, transforms);
+        return join3(new_parts);
+    } else {
+        let chunks = split3(&grid);
+        let new_parts = find_rotations(&chunks, transforms);
+        return join4(new_parts);
+    }
+}
+
+// 1 3x3 => 1 4x4
+// 4 2x2 => 4 3x3 => 1 6x6
+// 9 2x2 => 9 3x3 => 1 9x9
+// 9 3x3 => 9 4x4 => 1 12x12
+// 36 2x2 => 36 3x3 => 1 18x18
+// 81 2x2 => 81 3x3 => 1 27x27
+
+// number of squares is N*N
+// size of new square is N*matrix size
+// sqrt(N) times take sqrt(N) matrices and join them into one big row
+fn join4(parts: Vec<Matrix>) -> Matrix {
+    let mut new_matrix = Vec::new();
+    let size = (parts.len() as f64).sqrt() as usize;
+    for row in parts.chunks(size) {
+        let mut one = Vec::new();
+        let mut two = Vec::new();
+        let mut three = Vec::new();
+        let mut four = Vec::new();
+        for grid in row.iter() {
+            one.push(grid[0][0]);
+            one.push(grid[0][1]);
+            one.push(grid[0][2]);
+            one.push(grid[0][3]);
+
+            two.push(grid[1][0]);
+            two.push(grid[1][1]);
+            two.push(grid[1][2]);
+            two.push(grid[1][3]);
+
+            three.push(grid[2][0]);
+            three.push(grid[2][1]);
+            three.push(grid[2][2]);
+            three.push(grid[2][3]);
+
+            four.push(grid[3][0]);
+            four.push(grid[3][1]);
+            four.push(grid[3][2]);
+            four.push(grid[3][3]);
+        }
+        new_matrix.push(one);
+        new_matrix.push(two);
+        new_matrix.push(three);
+        new_matrix.push(four);
+    }
+    new_matrix
+}
+
+fn join3(parts: Vec<Matrix>) -> Matrix {
+    let mut new_matrix = Vec::new();
+    let size = (parts.len() as f64).sqrt() as usize;
+    for row in parts.chunks(size) {
+        let mut up = Vec::new();
+        let mut middle = Vec::new();
+        let mut down = Vec::new();
+        for grid in row.iter() {
+            up.push(grid[0][0]);
+            up.push(grid[0][1]);
+            up.push(grid[0][2]);
+            middle.push(grid[1][0]);
+            middle.push(grid[1][1]);
+            middle.push(grid[1][2]);
+            down.push(grid[2][0]);
+            down.push(grid[2][1]);
+            down.push(grid[2][2]);
+        }
+        new_matrix.push(up);
+        new_matrix.push(middle);
+        new_matrix.push(down);
+    }
+    new_matrix
+}
+
+
+fn find_rotations(chunks: &Vec<Matrix>, transforms: &HashMap<Matrix, Matrix>) -> Vec<Matrix> {
+    let mut new_grid_parks = Vec::new();
+    'outer: for chunk in chunks {
+        if transforms.contains_key(chunk) {
+            new_grid_parks.push(transforms.get(chunk).unwrap().clone());
+            continue;
+        }
+        let mut rotated = rotate(&chunk);
+        for _ in 0..3 {
+            if transforms.contains_key(&rotated) {
+                new_grid_parks.push(transforms.get(&rotated).unwrap().clone());
+                continue 'outer;
+            }
+            rotated = rotate(&rotated);
+        }
+        rotated = mirror(&rotated);
+        for _ in 0..4 {
+            if transforms.contains_key(&rotated) {
+                new_grid_parks.push(transforms.get(&rotated).unwrap().clone());
+                continue 'outer;
+            }
+            rotated = rotate(&rotated);
+        }
+        print(&rotated);
+        panic!("rotation not found");
+    }
+    new_grid_parks
+}
+
+// .#.
+// ..#
+// ###
+//
+// .#.
+// #..
+// ###
+//
+fn mirror(grid: &Matrix) -> Matrix {
+    let mut new_grid = Vec::new();
+    for row in 0..grid.len() { //0..len
+        let mut new_row = Vec::new();
+        for column in (0..grid.len()).rev() { //0..len
+            new_row.push(grid[row][column]);
+        }
+        new_grid.push(new_row);
+    }
+    new_grid
+}
+
+fn rotate(grid: &Matrix) -> Matrix {
+    // 0 1 2
+    // 3 4 5
+    // 6 7 8
+    //
+    //
+    // getting
+    // 0 3 6
+    // 1 4 7
+    // 2 5 8
+    //
+    // need
+    // 6 3 0
+    // 7 4 1
+    // 8 5 2
+    //
+    // 0 1
+    // 2 3
+    //
+    // 2 0
+    // 3 1
+    let mut new_grid = Vec::new();
+    for column in 0..grid.len() { //0..len
+        let mut new_row = Vec::new();
+        for row in (0..grid.len()).rev() { //0..len
+            new_row.push(grid[row][column]);
+        }
+        new_grid.push(new_row);
+    }
+    new_grid
+}
+
+fn split2(grid: &Matrix) -> Vec<Matrix> {
+    let mut chunks = Vec::new();
+    let mut rows = grid.iter().peekable();
+    while rows.peek().is_some() {
+        let mut first = rows.next().unwrap().chunks(2).peekable();
+        let mut second = rows.next().unwrap().chunks(2);
+        while first.peek().is_some() {
+            let mut chunk = Vec::new();
+            chunk.push(first.next().unwrap().to_vec());
+            chunk.push(second.next().unwrap().to_vec());
+            chunks.push(chunk);
         }
     }
-    println!("{:?}", sliced_grid);
+
+    chunks
+}
 
 
+fn split3(grid: &Matrix) -> Vec<Matrix> {
+    let mut chunks = Vec::new();
+    let mut rows = grid.iter().peekable();
+    while rows.peek().is_some() {
+        let mut first = rows.next().unwrap().chunks(3).peekable();
+        let mut second = rows.next().unwrap().chunks(3);
+        let mut third = rows.next().unwrap().chunks(3);
+        while first.peek().is_some() {
+            let mut chunk = Vec::new();
+            chunk.push(first.next().unwrap().to_vec());
+            chunk.push(second.next().unwrap().to_vec());
+            chunk.push(third.next().unwrap().to_vec());
+            chunks.push(chunk);
+        }
+    }
+
+    chunks
 }
 
 fn fractalize(input: &str) -> usize {
-    //let mut grid: Matrix = vec![
-        //vec![false, true, false],
-        //vec![false, false, true],
-        //vec![true, true, true]
-    //];
     let mut grid: Matrix = vec![
-        vec![true, true, true, false],
-        vec![true, true, false, true],
-        vec![false, false, false, true],
-        vec![false, false, true, false]
+        vec![false, true, false],
+        vec![false, false, true],
+        vec![true, true, true]
     ];
 
     let mut transforms = HashMap::new();
@@ -96,11 +270,13 @@ fn fractalize(input: &str) -> usize {
         let from = line_to_matrix(parts.next().unwrap());
         let to = line_to_matrix(parts.next().unwrap());
 
-        transforms.insert(from, to);
+        transforms.insert(from.clone(), to.clone());
     }
 
-    for _ in 0..1 {
-        step(&mut grid, &transforms);
+    for x in 0..5 {
+        println!("step {}", x);
+        print(&grid);
+        grid = step(&grid, &transforms);
     }
 
     count_on(&grid)
